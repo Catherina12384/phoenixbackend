@@ -1,5 +1,6 @@
 package com.phoenix.controller;
 
+import com.phoenix.dto.DealerDto;
 import com.phoenix.service.DealerService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
