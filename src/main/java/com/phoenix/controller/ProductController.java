@@ -1,5 +1,7 @@
 package com.phoenix.controller;
 
+import com.phoenix.dto.PageDto;
+import com.phoenix.dto.ProductDto;
 import com.phoenix.service.ProductService;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +16,6 @@ public class ProductController {
         this.service = service;
     }
 
-    /** GET /api/products?dealer=hp&dealer=dell&category=Laptops&q=ryzen&page=0&size=24 */
     @GetMapping
     public PageDto<ProductDto> list(@RequestParam(name = "dealer", required = false) List<String> dealer,
                                     @RequestParam(required = false) String category,

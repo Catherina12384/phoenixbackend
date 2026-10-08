@@ -1,54 +1,58 @@
 package com.phoenix.controller;
 
+import com.phoenix.dto.DealerDto;
+import com.phoenix.dto.DealerRequest;
+import com.phoenix.dto.DealerUpdateRequest;
+import com.phoenix.dto.ProductDto;
+import com.phoenix.dto.ProductRequest;
 import com.phoenix.service.DealerService;
 import com.phoenix.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-/** Everything under /api/admin requires the ADMIN role (see SecurityConfig). */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
-    private final DealerService dealers;
-    private final ProductService products;
+    private final DealerService dealerService;
+    private final ProductService productService;
 
-    public AdminController(DealerService dealers, ProductService products) {
-        this.dealers = dealers;
-        this.products = products;
+    public AdminController(DealerService dealerService, ProductService productService) {
+        this.dealerService = dealerService;
+        this.productService = productService;
     }
 
     @PostMapping("/dealers")
     @ResponseStatus(HttpStatus.CREATED)
-    public DealerDto createDealer(@Valid @RequestBody DealerRequest r) {
-        return dealers.create(r);
+    public DealerDto createDealer(@Valid @RequestBody DealerRequest request) {
+        return dealerService.create(request);
     }
 
     @PutMapping("/dealers/{id}")
-    public DealerDto updateDealer(@PathVariable String id, @Valid @RequestBody DealerUpdateRequest r) {
-        return dealers.update(id, r);
+    public DealerDto updateDealer(@PathVariable String id, @Valid @RequestBody DealerUpdateRequest request) {
+        return dealerService.update(id, request);
     }
 
     @DeleteMapping("/dealers/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDealer(@PathVariable String id) {
-        dealers.delete(id);
+        dealerService.delete(id);
     }
 
     @PostMapping("/products")
     @ResponseStatus(HttpStatus.CREATED)
-    public ProductDto createProduct(@Valid @RequestBody ProductRequest r) {
-        return products.create(r);
+    public ProductDto createProduct(@Valid @RequestBody ProductRequest request) {
+        return productService.create(request);
     }
 
     @PutMapping("/products/{id}")
-    public ProductDto updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest r) {
-        return products.update(id, r);
+    public ProductDto updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
+        return productService.update(id, request);
     }
 
     @DeleteMapping("/products/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteProduct(@PathVariable Long id) {
-        products.delete(id);
+        productService.delete(id);
     }
 }
