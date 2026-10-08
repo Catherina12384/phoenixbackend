@@ -1,5 +1,8 @@
 package com.phoenix.service;
 
+import com.phoenix.dto.DealerDto;
+import com.phoenix.dto.DealerRequest;
+import com.phoenix.dto.DealerUpdateRequest;
 import com.phoenix.entity.Dealer;
 import com.phoenix.repository.DealerRepository;
 import com.phoenix.repository.ProductRepository;
@@ -15,53 +18,67 @@ import java.util.List;
 public class DealerService {
     private final DealerRepository dealers;
     private final ProductRepository products;
+    private final DealerMapper mapper;
 
-    public DealerService(DealerRepository dealers, ProductRepository products) {
+    public DealerService(DealerRepository dealers, ProductRepository products, DealerMapper mapper) {
         this.dealers = dealers;
         this.products = products;
+        this.mapper = mapper;
     }
 
     @Transactional(readOnly = true)
     public List<DealerDto> list() {
-        return dealers.findAll(Sort.by("sortOrder", "name")).stream().map(DealerService::toDto).toList();
+        return dealers.findAll(Sort.by("sortOrder", "name"))
+                .stream()
+                .map(mapper::toDto)
+                .toList();
     }
 
     @Transactional
-    public DealerDto create(DealerRequest r) {
-        if (dealers.existsById(r.id())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Dealer id already exists: " + r.id());
+    public DealerDto create(DealerRequest request) {
+        if (dealers.existsById(request.id())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Dealer id already exists: " + request.id());
         }
-        Dealer d = new Dealer();
-        d.setId(r.id());
-        d.setName(r.name().trim());
-        d.setLogoUrl(blankToNull(r.logo()));
-        d.setSortOrder(r.sortOrder() == null ? 0 : r.sortOrder());
-        return toDto(dealers.save(d));
+
+        Dealer dealer = new Dealer();
+        dealer.setId(request.id());
+        dealer.setName(request.name().trim());
+        dealer.setLogoUrl(blankToNull(request.logo()));
+        dealer.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
+
+        return mapper.toDto(dealers.save(dealer));
     }
 
     @Transactional
-    public DealerDto update(String id, DealerUpdateRequest r) {
-        Dealer d = dealers.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dealer not found"));
-        d.setName(r.name().trim());
-        d.setLogoUrl(blankToNull(r.logo()));
-        if (r.sortOrder() != null) d.setSortOrder(r.sortOrder());
-        return toDto(d);
+    public DealerDto update(String id, DealerUpdateRequest request) {
+        Dealer dealer = dealers.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Dealer not found"));
+
+        dealer.setName(request.name().trim());
+        dealer.setLogoUrl(blankToNull(request.logo()));
+        if (request.sortOrder() != null) {
+            dealer.setSortOrder(request.sortOrder());
+        }
+
+        return mapper.toDto(dealer);
     }
 
     @Transactional
     public void delete(String id) {
-        if (!dealers.existsById(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dealer not found");
+        if (!dealers.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dealer not found");
+        }
         if (products.existsByDealer_Id(id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Dealer still has products. Move or delete them first.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Dealer still has products. Move or delete them first.");
         }
         dealers.deleteById(id);
     }
 
-    static DealerDto toDto(Dealer d) {
-        return new DealerDto(d.getId(), d.getName(), d.getLogoUrl());
-    }
-
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s.trim();
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
