@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/phoenix}
+    username: ${DB_USER:phoenix}
+    password: ${DB_PASSWORD:phoenix}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # Flyway owns the schema; Hibernate only checks it matches
+  flyway:
+    enabled: true
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}          # required, at least 32 characters
+    ttl-minutes: 720
+  admin:                           # first admin is created at startup if the email is set and not yet in the DB
+    name: ${ADMIN_NAME:Admin}
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}

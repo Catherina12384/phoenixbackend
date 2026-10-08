@@ -1,0 +1,18 @@
+INSERT INTO dealers (id, name, logo_url, sort_order) VALUES
+ ('hp',        'HP',        '/dealer-logos/hp.png',       1),
+ ('dell',      'Dell',      '/dealer-logos/dell.png',     2),
+ ('lenovo',    'Lenovo',    '/dealer-logos/lenovo.png',   3),
+ ('asus',      'Asus',      '/dealer-logos/asus.png',     4),
+ ('acer',      'Acer',      '/dealer-logos/acer.png',     5),
+ ('amd',       'AMD',       '/dealer-logos/amd.png',      6),
+ ('apple',     'Apple',     '/dealer-logos/apple.png',    7),
+ ('brother',   'Brother',   '/dealer-logos/brother.png',  8),
+ ('hikvision', 'Hikvision', NULL,                         9),
+ ('cp-plus',   'CP Plus',   NULL,                        10),
+ ('dahua',     'Dahua',     NULL,                        11),
+ ('intel',     'Intel',     '/dealer-logos/intel.png',   12),
+ ('logitech',  'Logitech',  '/dealer-logos/logitech.png',13),
+ ('nvidia',    'NVIDIA',    '/dealer-logos/nvidia.png',  14),
+ ('tp-link',   'TP-Link',   NULL,                        15),
+ ('canon',     'Canon',     '/dealer-logos/canon.png',   16),
+ ('epson',     'Epson',     '/dealer-logos/epson.png',   17);

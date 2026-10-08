@@ -1,0 +1,7 @@
+# Local development only. Never use these values in production.
+app:
+  jwt:
+    secret: dev-only-secret-change-me-at-least-32-chars
+  admin:
+    email: admin@phoenix.local
+    password: ChangeMe123!
