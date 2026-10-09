@@ -24,6 +24,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
+    // Swagger UI. Disabled unless SWAGGER_ENABLED=true (see application.yml).
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
@@ -33,5 +36,6 @@ dependencies {
 
 tasks.named('test') { useJUnitPlatform() }
 
-// `./gradlew bootRun` uses the dev profile. A production jar does not.
+// `./gradlew bootRun` uses the dev profile (OTP printed to the log instead of SMS).
+// A production jar does not, so it always uses MSG91.
 tasks.named('bootRun') { systemProperty 'spring.profiles.active', 'dev' }

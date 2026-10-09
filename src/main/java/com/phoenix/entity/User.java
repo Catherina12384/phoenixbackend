@@ -11,7 +11,7 @@ import java.time.Instant;
 @Table(name = "users")
 @Getter @Setter @NoArgsConstructor
 public class User {
-    public enum Role { CUSTOMER, ADMIN }
+    public enum Role { CUSTOMER, STAFF, ADMIN }
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +22,8 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    /** E.164, always +91XXXXXXXXXX. Mandatory and unique. */
+    @Column(nullable = false, unique = true)
     private String phone;
 
     @Column(name = "password_hash", nullable = false)
@@ -30,6 +32,18 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.CUSTOMER;
+
+    /** Soft delete: false means the account can no longer log in or use existing tokens. */
+    @Column(nullable = false)
+    private boolean active = true;
+
+    /** True for staff created with an admin-set temporary password. */
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword;
+
+    /** Embedded in every JWT; incrementing it instantly invalidates all tokens of this user. */
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

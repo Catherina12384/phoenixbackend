@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+/** ADMIN only. Product UPDATE moved to PUT /api/products/{id} so staff can use it. */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
@@ -43,11 +44,6 @@ public class AdminController {
     @ResponseStatus(HttpStatus.CREATED)
     public ProductDto createProduct(@Valid @RequestBody ProductRequest request) {
         return productService.create(request);
-    }
-
-    @PutMapping("/products/{id}")
-    public ProductDto updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
-        return productService.update(id, request);
     }
 
     @DeleteMapping("/products/{id}")

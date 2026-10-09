@@ -2,7 +2,9 @@ package com.phoenix.controller;
 
 import com.phoenix.dto.PageDto;
 import com.phoenix.dto.ProductDto;
+import com.phoenix.dto.ProductRequest;
 import com.phoenix.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,5 +35,11 @@ public class ProductController {
     @GetMapping("/{id}")
     public ProductDto get(@PathVariable Long id) {
         return service.get(id);
+    }
+
+    /** ADMIN and STAFF only (enforced in SecurityConfig). Staff may change every field. */
+    @PutMapping("/{id}")
+    public ProductDto update(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
+        return service.update(id, request);
     }
 }

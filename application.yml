@@ -1,0 +1,70 @@
+# NO secrets in this file. Every sensitive value comes from an environment variable
+# (production) or from a local, git-ignored .env file (development).
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: phoenix-computers
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE}
+      minimum-idle: 1
+      connection-timeout: 10000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # Flyway owns the schema; Hibernate only checks it matches
+    properties:
+      hibernate.jdbc.time_zone: Asia/Kolkata
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+server:
+  port: 8080
+
+logging:
+  pattern:
+    # requestId | client ip | authenticated user
+    level: "%5p [%X{requestId:-}|%X{ip:-}|%X{user:-}]"
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}            # required, at least 32 characters
+    ttl-minutes: 720
+  admin:                             # first admin is created at startup if all of email/phone/password are set
+    name: ${ADMIN_NAME:Admin}
+    email: ${ADMIN_EMAIL:}
+    phone: ${ADMIN_PHONE:}
+    password: ${ADMIN_PASSWORD:}
+  security:
+    trusted-proxies: ${TRUSTED_PROXIES:}          # comma-separated IPs, e.g. 127.0.0.1 when behind nginx
+    cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:} # comma-separated, e.g. https://www.example.com
+  otp:
+    length: 6
+    ttl: 5m
+    max-attempts: 3
+    resend-cooldown: 60s
+    lockout: 15m                      # phone blocked from new OTPs after max-attempts wrong codes
+    hmac-secret: ${OTP_HMAC_SECRET}   # required, at least 32 characters, different from JWT_SECRET
+    sender: ${OTP_SENDER}             # msg91 (default) | logging (dev profile only)
+    msg91:
+      auth-key: ${MSG91_AUTH_KEY:}
+      template-id: ${MSG91_TEMPLATE_ID:}
+  rate-limit:
+    otp-per-phone:      { limit: 3,  window: 1h }
+    otp-per-ip:         { limit: 10, window: 1h }
+    otp-verify-per-ip:  { limit: 20, window: 15m }
+    login-failures:     { limit: 5,  window: 15m }   # per IP + email; then locked for the rest of the window
+    password-change-failures: { limit: 5, window: 15m }
