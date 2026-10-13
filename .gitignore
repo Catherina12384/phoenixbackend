@@ -41,3 +41,7 @@ pnpm-debug.log*
 .cache/
 .parcel-cache/
 coverage/
+
+#files
+*.md
+skills-lock.json
