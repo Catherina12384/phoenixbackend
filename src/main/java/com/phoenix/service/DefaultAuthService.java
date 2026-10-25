@@ -3,6 +3,7 @@ package com.phoenix.service;
 import com.phoenix.audit.AuditAction;
 import com.phoenix.audit.AuditLogger;
 import com.phoenix.common.ClientContext;
+import com.phoenix.common.LoginIdentifier;
 import com.phoenix.dto.AuthResponse;
 import com.phoenix.dto.ChangePasswordRequest;
 import com.phoenix.dto.LoginRequest;
@@ -11,6 +12,7 @@ import com.phoenix.entity.User;
 import com.phoenix.ratelimit.RateLimitProperties;
 import com.phoenix.ratelimit.RateLimiter;
 import com.phoenix.repository.UserRepository;
+import com.phoenix.security.AuthenticatedUser;
 import com.phoenix.security.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +36,13 @@ public class DefaultAuthService implements AuthService {
     private final ClientContext client;
     private final AuditLogger audit;
     private final UserCredentialUpdater credentials;
-    /** Compared against when the email is unknown, so response time does not reveal which emails exist. */
+    private final SessionRevoker sessions;
+    /** Compared against when the account is unknown, so response time does not reveal which accounts exist. */
     private final String dummyHash;
 
     public DefaultAuthService(UserRepository users, PasswordEncoder encoder, JwtService jwt, RateLimiter limiter,
                               RateLimitProperties rates, ClientContext client, AuditLogger audit,
-                              UserCredentialUpdater credentials) {
+                              UserCredentialUpdater credentials, SessionRevoker sessions) {
         this.users = users;
         this.encoder = encoder;
         this.jwt = jwt;
@@ -48,24 +51,26 @@ public class DefaultAuthService implements AuthService {
         this.client = client;
         this.audit = audit;
         this.credentials = credentials;
+        this.sessions = sessions;
         this.dummyHash = encoder.encode("not-a-real-password");
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        String email = request.email().trim().toLowerCase();
-        String key = "login:" + client.ip() + ":" + (email.length() > 254 ? email.substring(0, 254) : email);
+        LoginIdentifier id = LoginIdentifier.parse(request.identifier());
+        // Phone spellings (9500288164, +919500288164, 09500288164) normalise to one key, so they share one bucket.
+        String key = "login:" + client.ip() + ":" + (id.value().length() > 254 ? id.value().substring(0, 254) : id.value());
 
         limiter.assertNotReached(key, rates.loginFailures());      // 429 while locked out
 
-        Optional<User> found = users.findByEmail(email);
+        Optional<User> found = lookup(id);
         boolean passwordOk = encoder.matches(request.password(), found.map(User::getPasswordHash).orElse(dummyHash));
 
         if (found.isEmpty() || !passwordOk || !found.get().isActive()) {
             limiter.record(key, rates.loginFailures());
-            audit.logAs(email, null, AuditAction.LOGIN_FAILED, "user", null, false, null);
-            log.warn("Login failed for {}", email);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+            audit.logAs(id.masked(), null, AuditAction.LOGIN_FAILED, "user", null, false, null);
+            log.warn("Login failed for {}", id.masked());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email/phone or password");
         }
 
         User user = found.get();
@@ -108,5 +113,21 @@ public class DefaultAuthService implements AuthService {
 
         User fresh = users.findById(user.getId()).orElseThrow();
         return new AuthResponse(jwt.issue(fresh), UserDto.from(fresh));
+    }
+
+    @Override
+    public void logout(AuthenticatedUser actor) {
+        if (actor == null) return;
+        sessions.revokeAll(actor.id());
+        audit.log(AuditAction.LOGOUT, "user", String.valueOf(actor.id()), true, null);
+        log.info("Logout for {}: all sessions revoked", actor.email());
+    }
+
+    private Optional<User> lookup(LoginIdentifier id) {
+        return switch (id.kind()) {
+            case EMAIL -> users.findByEmail(id.value());
+            case PHONE -> users.findByPhone(id.value());
+            case INVALID -> Optional.empty();
+        };
     }
 }

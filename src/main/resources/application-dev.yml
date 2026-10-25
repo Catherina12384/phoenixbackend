@@ -1,0 +1,4 @@
+# Active with `./gradlew bootRun` (see build.gradle).
+app:
+  cookie:
+    secure: false   # http://localhost has no TLS; production keeps Secure=true

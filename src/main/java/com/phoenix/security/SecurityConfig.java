@@ -30,39 +30,50 @@ public class SecurityConfig {
 
     /*
      * Access matrix
-     *                                   anonymous  CUSTOMER  STAFF  ADMIN
-     *  GET  /api/products, /api/dealers     yes       yes      yes    yes
-     *  PUT  /api/products/{id}              no        no       yes    yes
-     *  /api/admin/** (create/delete products, dealers CRUD, users, audit log)  ADMIN only
+     *                                   anonymous  CUSTOMER  STAFF  ADMIN  temp-password user
+     *  GET  /api/products, /api/dealers     yes       yes      yes    yes     yes (public data)
+     *  POST login, register, forgot, logout yes       yes      yes    yes     yes
+     *  GET  /api/auth/me, POST change-pw    no        yes      yes    yes     yes
+     *  PUT  /api/products/{id}              no        no       yes    yes     no
+     *  /api/admin/**                        no        no       no     yes     no
+     *  anything else                        no        yes      yes    yes     no
+     *
+     * The last rule closes the old gap: "anyRequest().authenticated()" let a user who still had a temporary
+     * password reach every endpoint that had no explicit role. Now they get 403 everywhere except the rows above.
+     *
+     * CSRF stays disabled: the session cookie is SameSite=Strict and every state-changing endpoint takes
+     * JSON, which a cross-site form cannot send. This assumes the API and the site share one origin/site.
      */
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtService jwt, UserRepository users,
                                     AuditLogger audit, CorsConfigurationSource cors) throws Exception {
         http
-            .csrf(c -> c.disable())   // stateless API, token in Authorization header
-            .cors(c -> c.configurationSource(cors))
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(e -> e
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                .accessDeniedHandler((req, res, ex) -> {
-                    log.warn("Access denied: {} {}", req.getMethod(), req.getRequestURI());
-                    audit.log(AuditAction.ACCESS_DENIED, "endpoint", req.getMethod() + " " + req.getRequestURI(), false, null);
-                    res.setStatus(HttpStatus.FORBIDDEN.value());
-                    res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-                    res.getWriter().write("{\"status\":403,\"title\":\"Forbidden\",\"detail\":\"You do not have permission to do that.\"}");
-                }))
-            .authorizeHttpRequests(a -> a
-                .requestMatchers("/error").permitAll()   // otherwise 404/409/400 bodies turn into 401
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // only exist when SWAGGER_ENABLED=true
-                .requestMatchers(HttpMethod.GET, "/api/dealers/**", "/api/products/**").permitAll()
-                .requestMatchers(HttpMethod.POST,
-                        "/api/auth/register/request-otp", "/api/auth/register/verify",
-                        "/api/auth/login",
-                        "/api/auth/forgot-password/request-otp", "/api/auth/forgot-password/reset").permitAll()
-                .requestMatchers(HttpMethod.PUT, "/api/products/*").hasAnyRole("ADMIN", "STAFF")
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated())
-            .addFilterBefore(new JwtAuthFilter(jwt, users), UsernamePasswordAuthenticationFilter.class);
+                .csrf(c -> c.disable())
+                .cors(c -> c.configurationSource(cors))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                        .accessDeniedHandler((req, res, ex) -> {
+                            log.warn("Access denied: {} {}", req.getMethod(), req.getRequestURI());
+                            audit.log(AuditAction.ACCESS_DENIED, "endpoint", req.getMethod() + " " + req.getRequestURI(), false, null);
+                            res.setStatus(HttpStatus.FORBIDDEN.value());
+                            res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                            res.getWriter().write("{\"status\":403,\"title\":\"Forbidden\",\"detail\":\"You do not have permission to do that.\"}");
+                        }))
+                .authorizeHttpRequests(a -> a
+                        .requestMatchers("/error").permitAll()   // otherwise 404/409/400 bodies turn into 401
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // only exist when SWAGGER_ENABLED=true
+                        .requestMatchers(HttpMethod.GET, "/api/dealers/**", "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/register/request-otp", "/api/auth/register/verify",
+                                "/api/auth/login", "/api/auth/logout",
+                                "/api/auth/forgot-password/request-otp", "/api/auth/forgot-password/reset").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/change-password").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/products/*").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .anyRequest().hasAnyRole("CUSTOMER", "STAFF", "ADMIN"))
+                .addFilterBefore(new JwtAuthFilter(jwt, users), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

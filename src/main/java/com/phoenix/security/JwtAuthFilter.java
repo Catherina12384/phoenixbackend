@@ -5,6 +5,7 @@ import com.phoenix.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -17,13 +18,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Not a @Component on purpose: SecurityConfig adds it to the security chain only.
- * A token is accepted only if the user still exists, is active and the token version matches,
- * so deactivation, password changes and resets take effect immediately.
+ * The token is read from the httpOnly session cookie (the browser) or, as a fallback for Swagger and
+ * scripts, from an "Authorization: Bearer" header. It is accepted only if the user still exists, is active
+ * and the token version matches, so deactivation, password changes, resets and logout take effect immediately.
  * A user who must change a temporary password gets a single authority that opens nothing but
- * /api/auth/change-password and /api/auth/me.
+ * /api/auth/change-password, /api/auth/me and /api/auth/logout (see SecurityConfig).
  */
 public class JwtAuthFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
@@ -39,12 +42,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
+        resolveToken(req).ifPresent(token -> jwt.parse(token).ifPresentOrElse(this::authenticate,
+                () -> log.debug("Rejected invalid or expired token")));
+        chain.doFilter(req, res);
+    }
+
+    private static Optional<String> resolveToken(HttpServletRequest req) {
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+            for (Cookie c : cookies) {
+                if (AuthCookieService.NAME.equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
+                    return Optional.of(c.getValue());
+                }
+            }
+        }
         String header = req.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
-            jwt.parse(header.substring(7)).ifPresentOrElse(this::authenticate,
-                    () -> log.debug("Rejected invalid or expired token"));
+            return Optional.of(header.substring(7));
         }
-        chain.doFilter(req, res);
+        return Optional.empty();
     }
 
     private void authenticate(Claims claims) {
