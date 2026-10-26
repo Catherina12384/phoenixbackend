@@ -8,12 +8,12 @@ import org.springframework.web.context.request.RequestContextHolder;
 public class HttpClientContext implements ClientContext {
     @Override
     public String ip() {
-        return read(RequestContextFilter.ATTR_IP, "system");
+        return read(RequestLoggingContextFilter.ATTR_IP, "system");
     }
 
     @Override
     public String requestId() {
-        return read(RequestContextFilter.ATTR_REQUEST_ID, null);
+        return read(RequestLoggingContextFilter.ATTR_REQUEST_ID, null);
     }
 
     private static String read(String name, String fallback) {

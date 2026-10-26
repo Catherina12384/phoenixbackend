@@ -10,8 +10,8 @@ out/
 
 # SECRETS - never commit
 .env
+.env.example
 .env.*
-!.env.example
 *.pem
 *.key
 *.p12

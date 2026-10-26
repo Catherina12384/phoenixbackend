@@ -10,7 +10,7 @@ spring:
     username: ${DB_USER:phoenix}
     password: ${DB_PASSWORD:phoenix}
     hikari:
-      maximum-pool-size: ${DB_POOL_SIZE}
+      maximum-pool-size: ${DB_POOL_SIZE:5}
       minimum-idle: 1
       connection-timeout: 10000
   jpa:
