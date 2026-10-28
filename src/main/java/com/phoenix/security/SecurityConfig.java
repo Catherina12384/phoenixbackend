@@ -46,10 +46,10 @@ public class SecurityConfig {
      */
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtService jwt, UserRepository users,
-                                    AuditLogger audit, CorsConfigurationSource cors) throws Exception {
+                                    AuditLogger audit) throws Exception {
         http
                 .csrf(c -> c.disable())
-                .cors(c -> c.configurationSource(cors))
+                .cors(c -> {})
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
@@ -64,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()   // otherwise 404/409/400 bodies turn into 401
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // only exist when SWAGGER_ENABLED=true
                         .requestMatchers(HttpMethod.GET, "/api/dealers/**", "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/register/request-otp", "/api/auth/register/verify",
                                 "/api/auth/login", "/api/auth/logout",

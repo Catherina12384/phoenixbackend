@@ -1,6 +1,8 @@
 # NO secrets in this file. Every sensitive value comes from an environment variable
 # (production) or from a local, git-ignored .env file (development).
 spring:
+  profiles:
+    active: dev
   config:
     import: optional:file:.env[.properties]
   application:
@@ -33,6 +35,10 @@ logging:
     # requestId | client ip | authenticated user
     level: "%5p [%X{requestId:-}|%X{ip:-}|%X{user:-}]"
 
+  level:
+    org.flywaydb: DEBUG
+    org.springframework.jdbc: DEBUG
+
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:false}
@@ -58,7 +64,7 @@ app:
     resend-cooldown: 60s
     lockout: 15m                      # phone blocked from new OTPs after max-attempts wrong codes
     hmac-secret: ${OTP_HMAC_SECRET}   # required, at least 32 characters, different from JWT_SECRET
-    sender: ${OTP_SENDER}             # msg91 (default) | logging (dev profile only)
+    sender: ${OTP_SENDER:msg91}             # msg91 (default) | logging (dev profile only)
     msg91:
       auth-key: ${MSG91_AUTH_KEY:}
       template-id: ${MSG91_TEMPLATE_ID:}
